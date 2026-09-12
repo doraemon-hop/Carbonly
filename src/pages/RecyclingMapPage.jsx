@@ -20,12 +20,12 @@ import {
 import { VoiceSearchButton } from '../components/VoiceSearchButton';
 
 export const RecyclingMapPage = () => {
-  const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState(initialLocations);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(initialLocations[0] || null);
   const [detailsModalLocation, setDetailsModalLocation] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {

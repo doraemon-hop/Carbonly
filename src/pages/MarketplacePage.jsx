@@ -28,7 +28,7 @@ export const MarketplacePage = () => {
   const { userStats, addToast, triggerConfetti } = useApp();
 
   const [activeTab, setActiveTab] = useState('browse'); // 'browse' or 'merchant'
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProductModal, setSelectedProductModal] = useState(null);
@@ -41,7 +41,7 @@ export const MarketplacePage = () => {
   const [newProdSustain, setNewProdSustain] = useState('');
   const [newProdImage, setNewProdImage] = useState('');
   const [isSubmittingProd, setIsSubmittingProd] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchProds = async () => {
