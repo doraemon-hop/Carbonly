@@ -1,54 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { dataService } from '../services/dataService';
 import { 
   Menu, 
   Search, 
   Bell, 
-  MapPin, 
-  Sparkles, 
-  Award, 
-  RotateCcw, 
-  UserCheck, 
-  Store,
-  ChevronDown
+  MapPin
 } from 'lucide-react';
 
 export const TopNav = ({ onMenuClick }) => {
-  const { currentUser, loginAsDemoCitizen, loginAsDemoMerchant } = useAuth();
-  const { userStats, addToast, triggerConfetti } = useApp();
-  const [showDemoMenu, setShowDemoMenu] = useState(false);
+  const { currentUser } = useAuth();
+  const { userStats } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
-
-  const handleAddQuickPoints = async () => {
-    try {
-      const updated = await dataService.updateUser({
-        ecoPoints: userStats.ecoPoints + 150,
-        carbonSaved: parseFloat((userStats.carbonSaved + 12.5).toFixed(1)),
-      });
-      triggerConfetti();
-      addToast({
-        title: 'Quick Test Bonus Added! ⚡',
-        message: '+150 EcoPoints & +12.5 kg CO₂e saved credited to your profile.',
-        type: 'points',
-        points: 150,
-      });
-      setShowDemoMenu(false);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleResetDemoData = () => {
-    dataService.resetAllDemoData();
-    addToast({
-      title: 'Demo Data Reset',
-      message: 'Restored all default mock footprints, actions, and leaderboard.',
-      type: 'info',
-    });
-    window.location.reload();
-  };
 
   return (
     <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -77,66 +40,8 @@ export const TopNav = ({ onMenuClick }) => {
         />
       </div>
 
-      {/* Right: Quick Demo Tour Bar & Notifications */}
+      {/* Right: Notifications & User */}
       <div className="flex items-center gap-2 sm:gap-3">
-        
-        {/* Hackathon Quick Demo Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDemoMenu(!showDemoMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold hover:bg-emerald-100/60 transition shadow-sm"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span className="hidden sm:inline">Demo Controls</span>
-            <ChevronDown className="w-3 h-3 text-emerald-700" />
-          </button>
-
-          {showDemoMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-xs space-y-1 animate-scale-in">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Hackathon Judge Shortcuts
-              </div>
-              <button
-                onClick={handleAddQuickPoints}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 text-emerald-800 font-medium flex items-center gap-2 transition"
-              >
-                <Award className="w-4 h-4 text-emerald-600" />
-                <span>+150 EcoPoints (Test Reward Flow)</span>
-              </button>
-              <button
-                onClick={async () => {
-                  await loginAsDemoCitizen();
-                  setShowDemoMenu(false);
-                  addToast({ title: 'Logged in as Citizen', message: 'Switched to Geetika Soni profile.', type: 'info' });
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 font-medium flex items-center gap-2 transition"
-              >
-                <UserCheck className="w-4 h-4 text-teal-600" />
-                <span>Switch to Citizen View</span>
-              </button>
-              <button
-                onClick={async () => {
-                  await loginAsDemoMerchant();
-                  setShowDemoMenu(false);
-                  addToast({ title: 'Logged in as Merchant', message: 'Switched to EarthCraft Studio account.', type: 'info' });
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 font-medium flex items-center gap-2 transition"
-              >
-                <Store className="w-4 h-4 text-amber-600" />
-                <span>Switch to Merchant View</span>
-              </button>
-              <div className="border-t border-slate-100 pt-1">
-                <button
-                  onClick={handleResetDemoData}
-                  className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 font-medium flex items-center gap-2 transition"
-                >
-                  <RotateCcw className="w-4 h-4 text-rose-500" />
-                  <span>Reset All Mock Data</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Notifications */}
         <div className="relative">
@@ -181,7 +86,7 @@ export const TopNav = ({ onMenuClick }) => {
           />
           <div className="hidden xl:block text-left">
             <div className="text-xs font-bold text-slate-800 leading-tight">
-              {currentUser?.name || 'Geetika Soni'}
+              {currentUser?.name || 'Eco Citizen'}
             </div>
             <div className="text-[10px] text-emerald-600 font-medium">
               {userStats.ecoPoints.toLocaleString()} EcoPoints

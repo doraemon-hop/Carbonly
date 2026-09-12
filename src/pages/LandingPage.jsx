@@ -22,12 +22,15 @@ import {
 } from 'lucide-react';
 
 export const LandingPage = () => {
-  const { loginAsDemoCitizen } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleQuickStart = async () => {
-    await loginAsDemoCitizen();
-    navigate('/dashboard');
+  const handleQuickStart = () => {
+    if (currentUser) {
+      navigate('/dashboard');
+    } else {
+      navigate('/signup');
+    }
   };
 
   const steps = [
@@ -183,7 +186,7 @@ export const LandingPage = () => {
                 onClick={handleQuickStart}
                 className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2"
               >
-                <span>Get Started (Demo Access)</span>
+                <span>{currentUser ? 'Go to Dashboard' : 'Get Started'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
 
@@ -641,7 +644,7 @@ export const LandingPage = () => {
                 onClick={handleQuickStart}
                 className="w-full py-2 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition"
               >
-                Launch Demo Dashboard →
+                Launch Dashboard →
               </button>
             </div>
 

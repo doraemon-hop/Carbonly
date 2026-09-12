@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { Leaf, Mail, Lock, User, ArrowRight, AlertCircle, Store, Sparkles } from 'lucide-react';
+import { Leaf, Mail, Lock, User, ArrowRight, AlertCircle, Store, Sparkles, Loader2 } from 'lucide-react';
 
 export const SignupPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('citizen');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
 
-  const { signup, loginWithGoogle } = useAuth();
+  const { signup, currentUser, loading: authLoading } = useAuth();
   const { addToast } = useApp();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [currentUser, authLoading, navigate]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -24,9 +31,14 @@ export const SignupPage = () => {
       return;
     }
 
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters long.');
+      return;
+    }
+
     try {
-      setLoading(true);
-      await signup(email, password, name, role);
+      setSubmitting(true);
+      await signup(email.trim(), password, name.trim(), role);
       addToast({
         title: 'Account Created! 🎉',
         message: 'Welcome to Carbonly! +500 EcoPoints bonus added to your Green Wallet.',
@@ -35,9 +47,9 @@ export const SignupPage = () => {
       });
       navigate('/dashboard');
     } catch (err) {
-      setLocalError(err.message || 'Signup failed.');
+      setLocalError(err.message || 'Signup failed. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -61,9 +73,9 @@ export const SignupPage = () => {
         <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-3xl border border-slate-200/80 sm:px-10">
           
           {localError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{localError}</span>
+            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5 animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{localError}</span>
             </div>
           )}
 
@@ -105,6 +117,7 @@ export const SignupPage = () => {
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="text"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Geetika Soni"
@@ -119,6 +132,7 @@ export const SignupPage = () => {
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
@@ -133,6 +147,7 @@ export const SignupPage = () => {
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 characters"
@@ -143,11 +158,20 @@ export const SignupPage = () => {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 hover:shadow-lg transition flex items-center justify-center gap-2"
+              disabled={submitting}
+              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 hover:shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span>{loading ? 'Creating Account...' : 'Create Account (+500 pts)'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Account (+500 pts)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 

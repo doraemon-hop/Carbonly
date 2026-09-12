@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 // Read config from environment variables or custom runtime settings
 const firebaseConfig = {
@@ -11,6 +12,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '',
 };
 
 export const isFirebaseConfigured = Boolean(
@@ -24,6 +26,7 @@ let auth = null;
 let db = null;
 let storage = null;
 let googleProvider = null;
+let analytics = null;
 
 if (isFirebaseConfigured) {
   try {
@@ -32,9 +35,19 @@ if (isFirebaseConfigured) {
     db = getFirestore(app);
     storage = getStorage(app);
     googleProvider = new GoogleAuthProvider();
+
+    // Initialize analytics if supported in browser environment
+    if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+      isSupported().then((supported) => {
+        if (supported) {
+          analytics = getAnalytics(app);
+        }
+      }).catch(() => {});
+    }
   } catch (error) {
-    console.warn('Firebase initialization error, running in Local Offline Mode:', error);
+    console.warn('Firebase initialization error:', error);
   }
 }
 
-export { app, auth, db, storage, googleProvider, firebaseConfig };
+export { app, auth, db, storage, googleProvider, analytics, firebaseConfig };
+

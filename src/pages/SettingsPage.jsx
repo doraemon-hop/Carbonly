@@ -1,35 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useApp } from '../context/AppContext';
-import { dataService } from '../services/dataService';
 import { 
   Settings, 
   Database, 
   CheckCircle2, 
-  AlertCircle, 
-  RotateCcw, 
-  ShieldCheck, 
   Bell, 
-  Key, 
-  ExternalLink,
   Sparkles
 } from 'lucide-react';
 
 export const SettingsPage = () => {
   const { isFirebaseConfigured, currentUser } = useAuth();
-  const { addToast } = useApp();
-
-  const handleResetData = () => {
-    dataService.resetAllDemoData();
-    addToast({
-      title: 'Demo Data Reset',
-      message: 'All mock state has been re-seeded to defaults.',
-      type: 'info',
-    });
-    setTimeout(() => {
-      window.location.reload();
-    }, 800);
-  };
 
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
@@ -44,7 +24,7 @@ export const SettingsPage = () => {
           Application Settings
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Manage your cloud backend configuration, notifications, and demo environment settings.
+          Manage your cloud backend configuration and notification preferences.
         </p>
       </div>
 
@@ -78,7 +58,7 @@ export const SettingsPage = () => {
             ) : (
               <>
                 <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>Zero-Setup Hackathon Mode (Reactive Local Storage)</span>
+                <span>Firebase Not Connected</span>
               </>
             )}
           </span>
@@ -96,35 +76,12 @@ export const SettingsPage = () => {
             VITE_FIREBASE_APP_ID=1:123456789:web:abcdef
           </div>
           <p className="text-slate-500 text-[11px]">
-            In the absence of Firebase keys, the application gracefully operates using the high-fidelity mock storage engine with real-time reactive updates so judges and testers can run the product without setup delays.
+            When Firebase is configured, the application connects to Google Firebase Auth, Firestore, and Cloud Storage for full authentication and data persistence.
           </p>
         </div>
       </div>
 
-      {/* Demo Controls Card */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Demo Testing & Reset Utility</h3>
-            <p className="text-xs text-slate-500">Restore default seeded mock data for footprints, actions, and marketplace.</p>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <div className="text-xs text-slate-600">
-            Resetting clears custom simulated actions and reloads the default Ahmedabad leaderboard and baseline footprint.
-          </div>
-
-          <button
-            type="button"
-            onClick={handleResetData}
-            className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shrink-0"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Reset All Demo Data</span>
-          </button>
-        </div>
-      </div>
 
       {/* Notification Preferences */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">

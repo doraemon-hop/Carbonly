@@ -9,48 +9,102 @@ import {
   createUserWithEmailAndPassword, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  updateProfile
 } from 'firebase/auth';
 import { dataService } from '../services/dataService';
-import { initialUser } from '../data/mockData';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
+
+// Friendly mapper for Firebase Auth errors
+export const formatFirebaseAuthError = (error) => {
+  if (!error) return 'An error occurred during authentication.';
+  const code = error.code || '';
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'The email address is not valid.';
+    case 'auth/user-disabled':
+      return 'This user account has been disabled.';
+    case 'auth/user-not-found':
+      return 'No account found with this email address.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Invalid email or password. Please try again.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email address already exists.';
+    case 'auth/operation-not-allowed':
+      return 'Email/Password sign-in is not enabled in the Firebase Console.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in window was closed before completing.';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by your browser. Please allow popups.';
+    case 'auth/cancelled-popup-request':
+      return 'Only one popup sign-in request can be active at a time.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    default:
+      return error.message?.replace(/^Firebase:\s*/, '') || 'Authentication failed.';
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
 
-  // Initialize auth state
+  // Listen to Firebase Auth state
   useEffect(() => {
     let unsubscribe = () => {};
 
-    if (isFirebaseConfigured && auth) {
+    if (auth) {
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
-          const profile = await dataService.getUser(firebaseUser.uid);
-          setCurrentUser({
-            id: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: firebaseUser.displayName || profile.name || 'Eco Citizen',
-            avatar: firebaseUser.photoURL || profile.avatar,
-            ...profile,
-          });
+          try {
+            const profile = await dataService.getUser(firebaseUser.uid);
+            const userDoc = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || profile?.name || 'Eco Citizen',
+              email: firebaseUser.email,
+              avatar: firebaseUser.photoURL || profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.uid)}`,
+              role: profile?.role || 'citizen',
+              ecoPoints: profile?.ecoPoints ?? 500,
+              carbonSaved: profile?.carbonSaved ?? 0,
+              currentFootprint: profile?.currentFootprint ?? 160,
+              rank: profile?.rank ?? 12,
+              streak: profile?.streak ?? 1,
+              joinedDate: profile?.joinedDate || 'September 2026',
+              ...profile,
+            };
+            setCurrentUser(userDoc);
+            await dataService.updateUser(userDoc);
+          } catch (err) {
+            console.error('Error fetching user profile:', err);
+            setCurrentUser({
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Eco Citizen',
+              email: firebaseUser.email,
+              avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firebaseUser.uid)}`,
+              role: 'citizen',
+              ecoPoints: 500,
+              carbonSaved: 0,
+              currentFootprint: 160,
+              rank: 12,
+              streak: 1,
+              joinedDate: 'September 2026',
+            });
+          }
         } else {
-          // Check local stored session
-          const localUser = await dataService.getUser();
-          setCurrentUser(localUser);
+          setCurrentUser(null);
         }
         setLoading(false);
       });
     } else {
-      // Local demo mode default
-      dataService.getUser().then((user) => {
-        setCurrentUser(user);
-        setLoading(false);
-      });
+      setCurrentUser(null);
+      setLoading(false);
     }
 
     return () => unsubscribe();
@@ -59,136 +113,124 @@ export const AuthProvider = ({ children }) => {
   // Email/Password Signup
   const signup = async (email, password, name, role = 'citizen') => {
     setAuthError('');
+    if (!auth) {
+      const msg = 'Firebase is not initialized. Please verify your .env configuration.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
     try {
-      if (isFirebaseConfigured && auth) {
-        const res = await createUserWithEmailAndPassword(auth, email, password);
-        const newUserDoc = {
-          id: res.user.uid,
-          name,
-          email,
-          role,
-          ecoPoints: 500, // Welcome bonus
-          carbonSaved: 0,
-          currentFootprint: 160,
-          rank: 12,
-          streak: 1,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
-          joinedDate: 'September 2026',
-        };
-        await dataService.updateUser(newUserDoc);
-        setCurrentUser(newUserDoc);
-        return newUserDoc;
-      } else {
-        // Mock signup
-        const newUserDoc = {
-          ...initialUser,
-          id: `user_${Date.now()}`,
-          name,
-          email,
-          role,
-          ecoPoints: 500,
-          carbonSaved: 0,
-          streak: 1,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
-        };
-        await dataService.updateUser(newUserDoc);
-        setCurrentUser(newUserDoc);
-        return newUserDoc;
+      const res = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (name) {
+        try {
+          await updateProfile(res.user, { displayName: name });
+        } catch (e) {
+          console.warn('Could not set displayName on Firebase Auth user:', e);
+        }
       }
+
+      const newUserDoc = {
+        id: res.user.uid,
+        name,
+        email,
+        role,
+        ecoPoints: 500, // Welcome bonus
+        carbonSaved: 0,
+        currentFootprint: 160,
+        rank: 12,
+        streak: 1,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+        joinedDate: 'September 2026',
+      };
+      await dataService.updateUser(newUserDoc);
+      setCurrentUser(newUserDoc);
+      return newUserDoc;
     } catch (err) {
-      setAuthError(err.message || 'Failed to create an account');
-      throw err;
+      const friendlyMsg = formatFirebaseAuthError(err);
+      setAuthError(friendlyMsg);
+      throw new Error(friendlyMsg);
     }
   };
 
   // Email/Password Login
   const login = async (email, password) => {
     setAuthError('');
+    if (!auth) {
+      const msg = 'Firebase is not initialized. Please verify your .env configuration.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
     try {
-      if (isFirebaseConfigured && auth) {
-        const res = await signInWithEmailAndPassword(auth, email, password);
-        const profile = await dataService.getUser(res.user.uid);
-        setCurrentUser(profile);
-        return profile;
-      } else {
-        // Local mode check
-        const user = await dataService.getUser();
-        setCurrentUser(user);
-        return user;
-      }
+      const res = await signInWithEmailAndPassword(auth, email, password);
+      const profile = await dataService.getUser(res.user.uid);
+      const userDoc = {
+        id: res.user.uid,
+        name: res.user.displayName || profile?.name || 'Eco Citizen',
+        email: res.user.email,
+        avatar: res.user.photoURL || profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(res.user.uid)}`,
+        role: profile?.role || 'citizen',
+        ecoPoints: profile?.ecoPoints ?? 500,
+        carbonSaved: profile?.carbonSaved ?? 0,
+        currentFootprint: profile?.currentFootprint ?? 160,
+        rank: profile?.rank ?? 12,
+        streak: profile?.streak ?? 1,
+        joinedDate: profile?.joinedDate || 'September 2026',
+        ...profile,
+      };
+      setCurrentUser(userDoc);
+      return userDoc;
     } catch (err) {
-      setAuthError(err.message || 'Failed to log in');
-      throw err;
+      const friendlyMsg = formatFirebaseAuthError(err);
+      setAuthError(friendlyMsg);
+      throw new Error(friendlyMsg);
     }
   };
 
   // Google Sign In
   const loginWithGoogle = async () => {
     setAuthError('');
-    try {
-      if (isFirebaseConfigured && auth && googleProvider) {
-        const res = await signInWithPopup(auth, googleProvider);
-        const existing = await dataService.getUser(res.user.uid);
-        const userDoc = {
-          ...existing,
-          id: res.user.uid,
-          name: res.user.displayName || 'Eco Citizen',
-          email: res.user.email,
-          avatar: res.user.photoURL || existing.avatar,
-        };
-        await dataService.updateUser(userDoc);
-        setCurrentUser(userDoc);
-        return userDoc;
-      } else {
-        // Demo google login fallback
-        const demoUser = {
-          ...initialUser,
-          name: 'Geetika Soni (Google)',
-          email: 'geetika.google@carbonly.eco',
-        };
-        await dataService.updateUser(demoUser);
-        setCurrentUser(demoUser);
-        return demoUser;
-      }
-    } catch (err) {
-      setAuthError(err.message || 'Google sign-in error');
-      throw err;
+    if (!auth || !googleProvider) {
+      const msg = 'Google authentication is not configured.';
+      setAuthError(msg);
+      throw new Error(msg);
     }
-  };
-
-  // Instant Demo Login (Hackathon Judge convenience)
-  const loginAsDemoCitizen = async () => {
-    const user = {
-      ...initialUser,
-      role: 'citizen',
-    };
-    await dataService.updateUser(user);
-    setCurrentUser(user);
-    return user;
-  };
-
-  const loginAsDemoMerchant = async () => {
-    const merchantUser = {
-      ...initialUser,
-      name: 'EarthCraft Merchant',
-      email: 'merchant@earthcraft.eco',
-      role: 'merchant',
-      businessName: 'EarthCraft Studio Ahmedabad',
-    };
-    await dataService.updateUser(merchantUser);
-    setCurrentUser(merchantUser);
-    return merchantUser;
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      const existing = await dataService.getUser(res.user.uid);
+      const userDoc = {
+        ...existing,
+        id: res.user.uid,
+        name: res.user.displayName || existing?.name || 'Eco Citizen',
+        email: res.user.email,
+        avatar: res.user.photoURL || existing?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(res.user.uid)}`,
+        role: existing?.role || 'citizen',
+        ecoPoints: existing?.ecoPoints ?? 500,
+        carbonSaved: existing?.carbonSaved ?? 0,
+        currentFootprint: existing?.currentFootprint ?? 160,
+        rank: existing?.rank ?? 12,
+        streak: existing?.streak ?? 1,
+        joinedDate: existing?.joinedDate || 'September 2026',
+      };
+      await dataService.updateUser(userDoc);
+      setCurrentUser(userDoc);
+      return userDoc;
+    } catch (err) {
+      const friendlyMsg = formatFirebaseAuthError(err);
+      setAuthError(friendlyMsg);
+      throw new Error(friendlyMsg);
+    }
   };
 
   // Logout
   const logout = async () => {
     try {
-      if (isFirebaseConfigured && auth) {
+      if (auth) {
         await signOut(auth);
       }
       setCurrentUser(null);
     } catch (err) {
       console.error('Logout error', err);
+      throw err;
     }
   };
 
@@ -198,11 +240,10 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     loginWithGoogle,
-    loginAsDemoCitizen,
-    loginAsDemoMerchant,
     logout,
     loading,
     authError,
+    setAuthError,
     isFirebaseConfigured,
   };
 
