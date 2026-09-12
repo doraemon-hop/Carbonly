@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
+import { initialLocations } from '../data/mockData';
 import { LeafletMap } from '../components/LeafletMap';
 import { 
   MapPin, 
@@ -16,6 +17,7 @@ import {
   Recycle,
   Sparkles
 } from 'lucide-react';
+import { VoiceSearchButton } from '../components/VoiceSearchButton';
 
 export const RecyclingMapPage = () => {
   const [locations, setLocations] = useState([]);
@@ -23,14 +25,23 @@ export const RecyclingMapPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [detailsModalLocation, setDetailsModalLocation] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchLocations = async () => {
-      const data = await dataService.getLocations();
-      setLocations(data);
-      if (data.length > 0) {
-        setSelectedLocation(data[0]);
+      setIsLoading(true);
+      try {
+        const data = await dataService.getLocations();
+        const finalData = (data && data.length > 0) ? data : initialLocations;
+        setLocations(finalData);
+        if (finalData.length > 0) {
+          setSelectedLocation(finalData[0]);
+        }
+      } catch {
+        setLocations(initialLocations);
+        setSelectedLocation(initialLocations[0]);
       }
+      setIsLoading(false);
     };
     fetchLocations();
   }, []);
@@ -44,11 +55,13 @@ export const RecyclingMapPage = () => {
   ];
 
   const filteredLocations = locations.filter((loc) => {
+    const q = searchQuery.trim().toLowerCase();
     const matchesCat = selectedCategory === 'all' || loc.categoryKey === selectedCategory;
-    const matchesSearch = 
-      loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !q ||
+      loc.name.toLowerCase().includes(q) ||
+      (loc.address && loc.address.toLowerCase().includes(q)) ||
+      (loc.category && loc.category.toLowerCase().includes(q)) ||
+      (loc.categoryKey && loc.categoryKey.toLowerCase().includes(q));
     return matchesCat && matchesSearch;
   });
 
@@ -80,7 +93,7 @@ export const RecyclingMapPage = () => {
           </p>
         </div>
 
-        {/* Search Input */}
+        {/* Search Input with Voice Search 🎤 */}
         <div className="relative max-w-xs w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
           <input
@@ -88,7 +101,13 @@ export const RecyclingMapPage = () => {
             placeholder="Search by center, area, or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-xs pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 shadow-sm"
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            className="w-full text-xs pl-10 pr-10 py-2.5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 shadow-sm"
+          />
+          {/* Voice Search Button – speaks into the search bar */}
+          <VoiceSearchButton
+            onResult={(text) => setSearchQuery(text)}
+            className="absolute right-2 top-1.5"
           />
         </div>
       </div>

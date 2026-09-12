@@ -31,10 +31,32 @@ import {
 // Local storage key helper
 const STORAGE_PREFIX = 'carbonly_';
 
+// ── Auto-clear stale localStorage ─────────────────────────────────────────────
+// Bump this version string whenever you want a full data reseed on next load.
+const DATA_VERSION = 'v4';
+const VERSION_KEY = STORAGE_PREFIX + '__version';
+try {
+  if (localStorage.getItem(VERSION_KEY) !== DATA_VERSION) {
+    // Wipe every carbonly_ key
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(STORAGE_PREFIX))
+      .forEach((k) => localStorage.removeItem(k));
+    localStorage.setItem(VERSION_KEY, DATA_VERSION);
+    console.info('[Carbonly] localStorage cleared and reseeded to', DATA_VERSION);
+  }
+} catch (_) { /* localStorage unavailable in SSR/test env */ }
+// ─────────────────────────────────────────────────────────────────────────────
+
 const getStorageItem = (key, defaultValue) => {
   try {
     const item = localStorage.getItem(STORAGE_PREFIX + key);
-    return item ? JSON.parse(item) : defaultValue;
+    if (!item) return defaultValue;
+    const parsed = JSON.parse(item);
+    // Treat stored empty arrays as missing when the default is non-empty
+    if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(defaultValue) && defaultValue.length > 0) {
+      return defaultValue;
+    }
+    return parsed;
   } catch {
     return defaultValue;
   }
@@ -54,34 +76,42 @@ class DataService {
   }
 
   initData() {
+    // Always seed arrays if missing OR empty (guards against stale empty-array state)
     if (!getStorageItem('user', null)) {
       setStorageItem('user', initialUser);
     }
     if (!getStorageItem('footprint', null)) {
       setStorageItem('footprint', initialFootprintBreakdown);
     }
-    if (!getStorageItem('actions', null)) {
+    const actions = getStorageItem('actions', null);
+    if (!actions || (Array.isArray(actions) && actions.length === 0)) {
       setStorageItem('actions', initialRecentActions);
     }
-    if (!getStorageItem('locations', null)) {
+    const locations = getStorageItem('locations', null);
+    if (!locations || (Array.isArray(locations) && locations.length === 0)) {
       setStorageItem('locations', initialLocations);
     }
-    if (!getStorageItem('products', null)) {
+    const products = getStorageItem('products', null);
+    if (!products || (Array.isArray(products) && products.length === 0)) {
       setStorageItem('products', initialProducts);
     }
-    if (!getStorageItem('rewards', null)) {
+    const rewards = getStorageItem('rewards', null);
+    if (!rewards || (Array.isArray(rewards) && rewards.length === 0)) {
       setStorageItem('rewards', initialRewards);
     }
     if (!getStorageItem('badges', null)) {
       setStorageItem('badges', initialBadges);
     }
-    if (!getStorageItem('leaderboard', null)) {
+    const leaderboard = getStorageItem('leaderboard', null);
+    if (!leaderboard || (Array.isArray(leaderboard) && leaderboard.length === 0)) {
       setStorageItem('leaderboard', initialLeaderboard);
     }
-    if (!getStorageItem('challenges', null)) {
+    const challenges = getStorageItem('challenges', null);
+    if (!challenges || (Array.isArray(challenges) && challenges.length === 0)) {
       setStorageItem('challenges', initialChallenges);
     }
-    if (!getStorageItem('feed', null)) {
+    const feed = getStorageItem('feed', null);
+    if (!feed || (Array.isArray(feed) && feed.length === 0)) {
       setStorageItem('feed', initialImpactFeed);
     }
     if (!getStorageItem('redeemedRewards', null)) {
@@ -307,7 +337,13 @@ class DataService {
 
   // Marketplace & Products
   async getProducts() {
-    return getStorageItem('products', initialProducts);
+    const stored = getStorageItem('products', initialProducts);
+    // Always guarantee the initial seed products are present
+    if (!Array.isArray(stored) || stored.length === 0) return initialProducts;
+    // Merge: keep initial products + any user-added ones (by id)
+    const initialIds = new Set(initialProducts.map(p => p.id));
+    const userAdded = stored.filter(p => !initialIds.has(p.id));
+    return [...initialProducts, ...userAdded];
   }
 
   async addProduct(product) {
@@ -344,7 +380,9 @@ class DataService {
 
   // Locations
   async getLocations() {
-    return getStorageItem('locations', initialLocations);
+    const stored = getStorageItem('locations', initialLocations);
+    if (!Array.isArray(stored) || stored.length === 0) return initialLocations;
+    return stored;
   }
 
   // Challenges

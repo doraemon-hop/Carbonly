@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { dataService } from '../services/dataService';
+import { initialProducts } from '../data/mockData';
 import { 
   ShoppingBag, 
   Store, 
@@ -20,6 +21,7 @@ import {
   DollarSign,
   X
 } from 'lucide-react';
+import { VoiceSearchButton } from '../components/VoiceSearchButton';
 
 export const MarketplacePage = () => {
   const { currentUser } = useAuth();
@@ -39,11 +41,18 @@ export const MarketplacePage = () => {
   const [newProdSustain, setNewProdSustain] = useState('');
   const [newProdImage, setNewProdImage] = useState('');
   const [isSubmittingProd, setIsSubmittingProd] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProds = async () => {
-      const data = await dataService.getProducts();
-      setProducts(data);
+      setIsLoading(true);
+      try {
+        const data = await dataService.getProducts();
+        setProducts(data && data.length > 0 ? data : initialProducts);
+      } catch {
+        setProducts(initialProducts);
+      }
+      setIsLoading(false);
     };
     fetchProds();
   }, []);
@@ -51,11 +60,13 @@ export const MarketplacePage = () => {
   const categories = ['all', 'Stationery', 'Bags & Storage', 'Drinkware', 'Clothing', 'Personal Care', 'Electronics'];
 
   const filteredProducts = products.filter((prod) => {
+    const q = searchQuery.trim().toLowerCase();
     const matchesCat = selectedCategory === 'all' || prod.category === selectedCategory;
-    const matchesSearch = 
-      prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prod.merchantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prod.sustainability.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !q ||
+      prod.name.toLowerCase().includes(q) ||
+      (prod.merchantName && prod.merchantName.toLowerCase().includes(q)) ||
+      (prod.sustainability && prod.sustainability.toLowerCase().includes(q)) ||
+      (prod.category && prod.category.toLowerCase().includes(q));
     return matchesCat && matchesSearch;
   });
 
@@ -180,7 +191,7 @@ export const MarketplacePage = () => {
               ))}
             </div>
 
-            {/* Search */}
+            {/* Search with Voice Search 🎤 */}
             <div className="relative max-w-xs w-full">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
               <input
@@ -188,12 +199,36 @@ export const MarketplacePage = () => {
                 placeholder="Search products, merchants..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 shadow-sm"
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                className="w-full text-xs pl-10 pr-10 py-2.5 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 shadow-sm"
+              />
+              {/* Voice Search Button – speaks into the search bar */}
+              <VoiceSearchButton
+                onResult={(text) => setSearchQuery(text)}
+                className="absolute right-2 top-1.5"
               />
             </div>
           </div>
 
           {/* Product Grid */}
+          {isLoading ? (
+            <div className="col-span-full py-12 text-center text-slate-400">
+              <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-xs">Loading products…</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-slate-500">
+              <p className="text-sm font-semibold">
+                {searchQuery ? <>No products found for <strong>"{searchQuery}"</strong>.</> : 'No products available.'}
+              </p>
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+                className="mt-3 text-xs font-bold text-emerald-600 hover:underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((prod) => (
               <div

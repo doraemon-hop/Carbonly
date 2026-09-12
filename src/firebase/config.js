@@ -42,7 +42,7 @@ if (isFirebaseConfigured) {
         if (supported) {
           analytics = getAnalytics(app);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } catch (error) {
     console.warn('Firebase initialization error:', error);

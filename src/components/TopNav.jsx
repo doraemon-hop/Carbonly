@@ -7,11 +7,13 @@ import {
   Bell, 
   MapPin
 } from 'lucide-react';
+import { VoiceSearchButton } from './VoiceSearchButton';
 
 export const TopNav = ({ onMenuClick }) => {
   const { currentUser } = useAuth();
   const { userStats } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -30,13 +32,21 @@ export const TopNav = ({ onMenuClick }) => {
         </div>
       </div>
 
-      {/* Center / Search bar */}
+      {/* Center / Search bar with Voice Search 🎤 */}
       <div className="hidden md:flex items-center relative max-w-xs w-full">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
         <input
           type="text"
           placeholder="Search actions, drop-offs, shops..."
-          className="w-full text-xs pl-9 pr-3 py-1.5 rounded-xl bg-slate-100/70 border border-slate-200/60 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-700"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+          className="w-full text-xs pl-9 pr-9 py-1.5 rounded-xl bg-slate-100/70 border border-slate-200/60 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-700"
+        />
+        {/* Voice Search Button – speaks into the search bar */}
+        <VoiceSearchButton
+          onResult={(text) => setSearchQuery(text)}
+          className="absolute right-1.5 top-0.5"
         />
       </div>
 
