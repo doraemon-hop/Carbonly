@@ -192,13 +192,17 @@ export const AuthProvider = ({ children }) => {
   // Google Sign In
   const loginWithGoogle = async () => {
     setAuthError('');
-    if (!auth || !googleProvider) {
-      const msg = 'Google authentication is not configured.';
+    if (!auth) {
+      const msg = 'Firebase Auth is not connected. Check environment variables in your deployment or use Demo Sign-in.';
       setAuthError(msg);
       throw new Error(msg);
     }
+
     try {
-      const res = await signInWithPopup(auth, googleProvider);
+      const provider = googleProvider || new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const res = await signInWithPopup(auth, provider);
       const existing = await dataService.getUser(res.user.uid);
       const userDoc = {
         ...existing,

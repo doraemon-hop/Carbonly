@@ -35,6 +35,7 @@ if (isFirebaseConfigured) {
     db = getFirestore(app);
     storage = getStorage(app);
     googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
 
     // Initialize analytics if supported in browser environment
     if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
@@ -47,6 +48,14 @@ if (isFirebaseConfigured) {
   } catch (error) {
     console.warn('Firebase initialization error:', error);
   }
+}
+
+// Fallback provider instance if auth is initialized later or in different bundle context
+if (!googleProvider) {
+  try {
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+  } catch (_) { }
 }
 
 export { app, auth, db, storage, googleProvider, analytics, firebaseConfig };
