@@ -39,6 +39,8 @@ export const formatFirebaseAuthError = (error) => {
       return 'Email/Password sign-in is not enabled in the Firebase Console.';
     case 'auth/weak-password':
       return 'Password should be at least 6 characters long.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized in Firebase Console. Please add your current URL under Firebase Authentication > Settings > Authorized Domains, or use Demo Sign-in below.';
     case 'auth/popup-closed-by-user':
       return 'Sign-in window was closed before completing.';
     case 'auth/popup-blocked':
@@ -222,6 +224,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Quick Demo Guest Login (works unconditionally even when offline or unauthorized domain)
+  const loginAsDemo = async (role = 'citizen') => {
+    setAuthError('');
+    const demoUser = {
+      id: 'user_carbonly_demo',
+      name: role === 'merchant' ? 'Eco Artisan Shop' : 'Geetika Soni (Demo)',
+      email: role === 'merchant' ? 'merchant@carbonly.eco' : 'geetika@carbonly.eco',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+      role,
+      ecoPoints: 4180,
+      carbonSaved: 48.5,
+      currentFootprint: 142,
+      rank: 3,
+      streak: 7,
+      joinedDate: 'September 2026',
+    };
+    await dataService.updateUser(demoUser);
+    setCurrentUser(demoUser);
+    return demoUser;
+  };
+
   // Logout
   const logout = async () => {
     try {
@@ -241,6 +264,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     loginWithGoogle,
+    loginAsDemo,
     logout,
     loading,
     authError,

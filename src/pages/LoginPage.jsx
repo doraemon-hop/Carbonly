@@ -17,7 +17,7 @@ export const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
 
-  const { login, loginWithGoogle, currentUser, loading: authLoading } = useAuth();
+  const { login, loginWithGoogle, loginAsDemo, currentUser, loading: authLoading } = useAuth();
   const { addToast } = useApp();
   const navigate = useNavigate();
 
@@ -179,6 +179,48 @@ export const LoginPage = () => {
               )}
             </button>
           </form>
+
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <p className="text-[11px] font-semibold text-slate-400 text-center uppercase tracking-wider mb-2.5">
+              ⚡ Quick Demo Mode (Bypass Firebase)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setSubmitting(true);
+                    await loginAsDemo('citizen');
+                    addToast({ title: 'Welcome Demo User! 🌿', message: 'Logged in as Eco Citizen.', type: 'success' });
+                    navigate('/dashboard');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="py-2 px-3 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>Demo Citizen</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setSubmitting(true);
+                    await loginAsDemo('merchant');
+                    addToast({ title: 'Welcome Merchant! 🏪', message: 'Logged in as Green Merchant.', type: 'success' });
+                    navigate('/dashboard');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="py-2 px-3 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>Demo Merchant</span>
+              </button>
+            </div>
+          </div>
 
           <div className="mt-6 text-center text-xs text-slate-500">
             Don't have an account?{' '}
